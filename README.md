@@ -12,6 +12,17 @@ A command-line tool for tweaking WeChat.
 - 阻止自动更新
 - 客户端多开
 
+## 微信 4.1.15.18 支持
+
+当前配置支持官网版微信 4.1.15.18（`CFBundleVersion` `270098`）的 Apple Silicon 切片：
+
+- 阻止消息撤回
+- 阻止微信自动更新覆盖补丁
+
+新版微信已将相关逻辑迁移到 `Contents/Resources/wechat.dylib`。补丁会先校验原始字节，
+不匹配时拒绝写入，并在首次修改前保存 `wechat.dylib.270098.bak`。历史版本的原地多开
+补丁没有直接沿用到该构建；本条目不宣称支持 4.1.15.18 多开。
+
 ## 安装&使用
 
 ```bash
@@ -27,6 +38,16 @@ wechattweak patch
 # 查看所有支持的 WeChat 版本
 wechattweak versions
 ```
+
+从本仓库构建并使用刚更新的本地配置：
+
+```bash
+swift build -c release
+.build/release/wechattweak patch --config "$PWD/config.json"
+```
+
+执行前请完全退出微信。补丁与签名流程尚不能替代双账号真实撤回测试；安装后请重新打开微信，
+用另一个账号发送并撤回一条测试消息确认效果。
 
 ## 参考
 

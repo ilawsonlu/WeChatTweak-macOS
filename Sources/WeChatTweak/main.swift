@@ -35,6 +35,9 @@ extension Tweak {
         var options: Tweak.Options
 
         mutating func run() async throws {
+            guard !Command.isRunning(app: options.app) else {
+                throw Error.appRunning
+            }
             print("------ Version ------")
             let version = try await Command.version(app: options.app)
             print("WeChat version: \(version ?? "unknown")")
@@ -46,7 +49,7 @@ extension Tweak {
             print("Matched config: \(config)")
 
             print("------ Patch ------")
-            try await Command.patch(
+            let patchedBinaries = try Command.patch(
                 app: options.app,
                 config: config
             )
@@ -54,7 +57,8 @@ extension Tweak {
 
             print("------ Resign ------")
             try await Command.resign(
-                app: options.app
+                app: options.app,
+                patchedBinaries: patchedBinaries
             )
             print("Done!")
 
@@ -71,6 +75,7 @@ struct Tweak: AsyncParsableCommand {
         case invalidConfig
         case invalidVersion
         case unsupportedVersion
+        case appRunning
 
         var errorDescription: String? {
             switch self {
@@ -82,6 +87,8 @@ struct Tweak: AsyncParsableCommand {
                 return "Invalid app version"
             case .unsupportedVersion:
                 return "Unsupported WeChat version"
+            case .appRunning:
+                return "WeChat is still running. Quit it completely, wait for its helper processes to exit, then run patch again."
             }
         }
     }
@@ -113,7 +120,19 @@ struct Tweak: AsyncParsableCommand {
                 }
             }
         )
-        var config: URL = URL(string:"https://raw.githubusercontent.com/sunnyyoung/WeChatTweak/refs/heads/master/config.json")!
+        var config: URL = Options.resolveDefaultConfig()
+
+        /// Prefer the checkout's config so a newly added build works immediately.
+        /// A standalone installed binary falls back to this fork's remote config.
+        private static func resolveDefaultConfig() -> URL {
+            let manager = FileManager.default
+            let current = URL(fileURLWithPath: manager.currentDirectoryPath, isDirectory: true)
+                .appendingPathComponent("config.json")
+            if manager.fileExists(atPath: current.path) {
+                return current
+            }
+            return URL(string: "https://raw.githubusercontent.com/ilawsonlu/WeChatTweak-macOS/refs/heads/master/config.json")!
+        }
     }
 
     static let configuration = CommandConfiguration(

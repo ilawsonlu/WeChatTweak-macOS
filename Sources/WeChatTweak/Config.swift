@@ -27,11 +27,37 @@ struct Config: Decodable {
         let arch: Arch
         let addr: UInt64
         let asm: Data
+        /// Original bytes expected at `addr` before patching. May list several
+        /// accepted variants (e.g. pristine + already-patched). Empty = skip check.
+        let expected: [Data]
 
         private enum CodingKeys: CodingKey {
             case arch
             case addr
             case asm
+            case expected
+        }
+
+        enum HexError: LocalizedError {
+            case invalidHex(String)
+            var errorDescription: String? {
+                switch self {
+                case let .invalidHex(hex): return "Invalid hex byte string: \(hex)"
+                }
+            }
+        }
+
+        /// Builds an entry programmatically (used by `--auto-locate`, which derives
+        /// the keeptip patch point from a code signature instead of config.json).
+        init(arch: Arch, addr: UInt64, asmHex: String, expectedHex: [String]) throws {
+            guard let asm = Data(hex: asmHex) else { throw HexError.invalidHex(asmHex) }
+            self.arch = arch
+            self.addr = addr
+            self.asm = asm
+            self.expected = try expectedHex.map {
+                guard let value = Data(hex: $0) else { throw HexError.invalidHex($0) }
+                return value
+            }
         }
 
         init(from decoder: any Decoder) throws {
@@ -59,27 +85,65 @@ struct Config: Decodable {
                 }
                 return value
             }()
+            self.expected = try {
+                // `expected` may be absent, a single hex string, or an array of them.
+                guard container.contains(.expected) else { return [] }
+                let hexes: [String]
+                if let single = try? container.decode(String.self, forKey: .expected) {
+                    hexes = [single]
+                } else {
+                    hexes = try container.decode([String].self, forKey: .expected)
+                }
+                return try hexes.map { hex in
+                    guard let value = Data(hex: hex) else {
+                        throw DecodingError.dataCorruptedError(
+                            forKey: CodingKeys.expected,
+                            in: container,
+                            debugDescription: "Invalid Entry.expected"
+                        )
+                    }
+                    return value
+                }
+            }()
         }
     }
 
     struct Target: Decodable {
         let identifier: String
         let entries: [Entry]
+        /// Bundle-relative path of the binary to patch. `nil` → `Contents/MacOS/WeChat`.
+        /// WeChat 4.x moved the revoke logic into `Contents/Resources/wechat.dylib`.
+        let binary: String?
 
         private enum CodingKeys: CodingKey {
             case identifier
             case entries
+            case binary
+        }
+
+        init(identifier: String, entries: [Entry], binary: String?) {
+            self.identifier = identifier
+            self.entries = entries
+            self.binary = binary
         }
 
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.identifier = try container.decode(String.self, forKey: .identifier)
             self.entries = try container.decode([Entry].self, forKey: .entries)
+            self.binary = try container.decodeIfPresent(String.self, forKey: .binary)
         }
     }
 
     let version: String
     let targets: [Target]
+
+    /// Decodable-only in production (config.json is the source), but `--auto-locate`
+    /// and the tests need to build one in memory.
+    init(version: String, targets: [Target]) {
+        self.version = version
+        self.targets = targets
+    }
 
     static func load(url: URL) async throws -> [Config] {
         if url.isFileURL {
@@ -94,6 +158,11 @@ struct Config: Decodable {
             )
         }
     }
+}
+
+extension Data {
+    /// Uppercase hex, the same shape config.json and every error message uses.
+    var hexString: String { map { String(format: "%02X", $0) }.joined() }
 }
 
 private extension Data {
