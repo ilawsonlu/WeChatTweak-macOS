@@ -21,8 +21,14 @@
           {
             "arch": "arm64",
             "addr": "4bc4e1c",
-            "expected": "40100034",
-            "asm": "82000014"
+            "expected": ["40100034", "82000014"],
+            "asm": "40100034"
+          },
+          {
+            "arch": "arm64",
+            "addr": "4bc55bc",
+            "expected": "60E600F9",
+            "asm": "7FE600F9"
           }
         ]
       },
