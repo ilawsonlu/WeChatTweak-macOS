@@ -25,6 +25,30 @@ A command-line tool for tweaking WeChat.
 
 ## 安装&使用
 
+### 微信 4.1.15.18 一键安装（Apple Silicon）
+
+先完全退出微信，然后在终端执行：
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ilawsonlu/WeChatTweak-macOS/master/install.sh)"
+```
+
+脚本会检查 macOS、Apple Silicon、微信构建号和 Xcode Command Line Tools，随后从本仓库
+构建工具、应用补丁、保留原始 `wechat.dylib.270098.bak`、严格校验签名并重新启动微信。
+版本或原始字节不匹配时会拒绝修改。查看所有选项：
+
+```bash
+./install.sh --help
+```
+
+如果希望先检查而不修改微信：
+
+```bash
+./install.sh --dry-run
+```
+
+### Homebrew（上游版本）
+
 ```bash
 # 安装
 brew install sunnyyoung/tap/wechattweak
