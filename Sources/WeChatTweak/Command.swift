@@ -47,6 +47,9 @@ struct Command {
     static func patch(app: URL, config: Config) throws -> [String] {
         var entriesByBinary: [String: [Config.Entry]] = [:]
         var binaryOrder: [String] = []
+        let installsRuntimeMarker = config.targets.contains {
+            $0.identifier == RuntimeMarkerInstaller.targetIdentifier
+        }
 
         for target in config.targets {
             let relative = target.binary ?? defaultBinary
@@ -57,12 +60,37 @@ struct Command {
             entriesByBinary[relative, default: []].append(contentsOf: target.entries)
         }
 
+        // Validate every configured range before injecting a load command. This keeps
+        // wrong builds byte-for-byte untouched rather than leaving a half-installed dylib.
+        for relative in binaryOrder {
+            let inspections = try Patcher.inspect(
+                binary: app.appendingPathComponent(relative),
+                entries: entriesByBinary[relative]!
+            )
+            if let unknown = inspections.first(where: { $0.state == .unknown }) {
+                throw Patcher.Error.expectedMismatch(
+                    arch: unknown.entry.arch.rawValue,
+                    va: unknown.entry.addr,
+                    found: unknown.currentHex,
+                    want: unknown.entry.expected.map(\.hexString)
+                )
+            }
+        }
+
+        if installsRuntimeMarker {
+            print("------ Runtime: orange revoke marker ------")
+            try RuntimeMarkerInstaller.install(app: app, buildVersion: config.version)
+        }
+
         for relative in binaryOrder {
             try Patcher.patch(
                 binary: app.appendingPathComponent(relative),
                 entries: entriesByBinary[relative]!,
                 backupVersion: config.version
             )
+        }
+        if installsRuntimeMarker {
+            binaryOrder.append(RuntimeMarkerInstaller.installedDylibPath)
         }
         return binaryOrder
     }

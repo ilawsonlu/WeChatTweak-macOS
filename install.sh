@@ -42,7 +42,7 @@ WeChatTweak 一键安装脚本
 
 支持范围：
   Apple Silicon，官网版微信 4.1.15.18（CFBundleVersion 270098）
-  功能包括阻止消息撤回和阻止自动更新；不包含多开。
+  功能包括阻止消息撤回、橙色撤回提示标记和阻止自动更新；不包含多开。
 EOF
 }
 
@@ -127,7 +127,9 @@ info "构建 WeChatTweak"
 swift build --package-path "$SOURCE_ROOT" -c release
 BIN_DIR="$(swift build --package-path "$SOURCE_ROOT" -c release --show-bin-path)"
 PATCHER="$BIN_DIR/wechattweak"
+RUNTIME_DYLIB="$BIN_DIR/libWeChatTweakRuntime.dylib"
 [[ -x "$PATCHER" ]] || die "构建完成，但没有找到 wechattweak 可执行文件"
+[[ -f "$RUNTIME_DYLIB" ]] || die "构建完成，但没有找到橙色撤回标记运行时库"
 
 info "验证版本配置"
 VERSIONS_OUTPUT="$("$PATCHER" versions --app "$APP_PATH" --config "$CONFIG_PATH")"

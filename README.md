@@ -9,6 +9,7 @@ A command-line tool for tweaking WeChat.
 ## 功能
 
 - 阻止消息撤回
+- 为拦截到的他人撤回提示增加橙色 `🟧` 标记
 - 阻止自动更新
 - 客户端多开
 
@@ -17,11 +18,14 @@ A command-line tool for tweaking WeChat.
 当前配置支持官网版微信 4.1.15.18（`CFBundleVersion` `270098`）的 Apple Silicon 切片：
 
 - 阻止消息撤回
+- 在他人撤回提示前显示橙色 `🟧` 标记，便于和普通系统提示区分
 - 阻止微信自动更新覆盖补丁
 
 新版微信已将相关逻辑迁移到 `Contents/Resources/wechat.dylib`。补丁会先校验原始字节，
-不匹配时拒绝写入，并在首次修改前保存 `wechat.dylib.270098.bak`。历史版本的原地多开
-补丁没有直接沿用到该构建；本条目不宣称支持 4.1.15.18 多开。
+不匹配时拒绝写入，并在首次修改前保存 `wechat.dylib.270098.bak`。橙色标记由随应用安装
+的 arm64 运行时库生成；运行时本身不记录提示或聊天正文，也不创建额外数据库。当前版本标记
+的是撤回提示行，并非把整块聊天气泡填充为橙色。历史版本的原地多开补丁没有直接沿用到该构建；
+本条目不宣称支持 4.1.15.18 多开。
 
 ## 安装&使用
 
@@ -34,8 +38,8 @@ A command-line tool for tweaking WeChat.
 ```
 
 脚本会检查 macOS、Apple Silicon、微信构建号和 Xcode Command Line Tools，随后从本仓库
-构建工具、应用补丁、保留原始 `wechat.dylib.270098.bak`、严格校验签名并重新启动微信。
-版本或原始字节不匹配时会拒绝修改。查看所有选项：
+构建工具和 arm64 运行时库、应用补丁、保留原始 `wechat.dylib.270098.bak`、严格校验签名
+并重新启动微信。版本或原始字节不匹配时会拒绝修改。查看所有选项：
 
 ```bash
 ./install.sh --help

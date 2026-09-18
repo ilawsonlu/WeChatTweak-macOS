@@ -304,7 +304,7 @@ struct Patcher {
         }
     }
 
-    private static func backup(binary: URL, version: String) throws {
+    static func backup(binary: URL, version: String) throws {
         guard !version.isEmpty, !version.contains("/"), !version.utf8.contains(0) else { throw Error.invalidFile }
         let backupURL = URL(fileURLWithPath: binary.path + "." + version + ".bak")
         guard !FileManager.default.fileExists(atPath: backupURL.path) else { return }

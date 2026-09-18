@@ -3,6 +3,18 @@
     "version": "270098",
     "targets": [
       {
+        "identifier": "runtime-marker",
+        "binary": "Contents/Resources/wechat.dylib",
+        "entries": [
+          {
+            "arch": "arm64",
+            "addr": "4bc4bac",
+            "expected": "F85FBCA9F65701A9F44F02A9",
+            "asm": "10BD02F010FA47F900021FD6"
+          }
+        ]
+      },
+      {
         "identifier": "revoke",
         "binary": "Contents/Resources/wechat.dylib",
         "entries": [
